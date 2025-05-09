@@ -1,15 +1,16 @@
 import { useState } from 'react';
 
+// Function to interact with the DeepSeek API
 async function getBotReply(prompt) {
-  const key = import.meta.env.VITE_OPENAI_API_KEY;
-  const res = await fetch('/api/v1/chat/completions', {
+  const key = import.meta.env.VITE_DEEPSEEK_API_KEY; // Get API key from environment
+  const res = await fetch('https://api.deepseek.com/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${key}`,
+      Authorization: `Bearer ${key}`, // Add Bearer token authorization
     },
     body: JSON.stringify({
-      model: 'gpt-3.5-turbo',
+      model: 'deepseek-chat',
       messages: [
         { role: 'system', content: 'You are a helpful assistant for SoftSell.' },
         { role: 'user', content: prompt },
@@ -21,13 +22,20 @@ async function getBotReply(prompt) {
   if (res.status === 429) {
     return 'Our AI quota is currently exhausted. Please try again later.';
   }
+
   if (!res.ok) {
-    console.error('OpenAI API error', await res.text());
+    const errorText = await res.text(); // Fetch detailed error message
+    console.error(`DeepSeek API error (Status: ${res.status}):`, errorText);
     return 'Sorry, something went wrong on my end.';
   }
 
-  const { choices } = await res.json();
-  return choices[0].message.content.trim();
+  try {
+    const { choices } = await res.json(); // Parse the response JSON
+    return choices[0].message.content.trim(); // Return the reply
+  } catch (err) {
+    console.error('Error parsing DeepSeek response:', err);
+    return 'Sorry, something went wrong on my end.';
+  }
 }
 
 export default function ChatWidget() {
@@ -41,15 +49,20 @@ export default function ChatWidget() {
     'How long until I get paid?',
   ];
 
+  // Send message and handle responses
   const sendMessage = async (text, fromUser = true) => {
-    setMessages(m => [...m, { text, fromUser }]);
-    setInput('');
+    setMessages((prev) => [...prev, { text, fromUser }]);
+    setInput(''); // Clear input field
     if (!fromUser) return;
+
     try {
-      const reply = await getBotReply(text);
-      setMessages(m => [...m, { text: reply, fromUser: false }]);
-    } catch {
-      setMessages(m => [...m, { text: 'Sorry, something went wrong.', fromUser: false }]);
+      const reply = await getBotReply(text); // Fetch bot reply
+      setMessages((prev) => [...prev, { text: reply, fromUser: false }]);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        { text: 'Sorry, something went wrong.', fromUser: false },
+      ]);
     }
   };
 
@@ -57,19 +70,22 @@ export default function ChatWidget() {
     <>
       <button
         className="fixed bottom-6 right-6 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 z-50"
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen((o) => !o)}
       >
         {open ? '✖️' : '💬'}
       </button>
 
       {open && (
         <div className="fixed bottom-20 right-6 w-80 max-h-[70vh] bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg flex flex-col overflow-hidden z-50">
+          {/* Header */}
           <div className="bg-blue-600 text-white p-3 flex justify-between items-center">
             <h3 className="font-semibold">SoftSell Help</h3>
             <button onClick={() => setOpen(false)}>✖️</button>
           </div>
+
+          {/* Quick Questions */}
           <div className="p-2 flex flex-wrap gap-2 bg-gray-100 dark:bg-gray-700">
-            {quickQuestions.map(q => (
+            {quickQuestions.map((q) => (
               <button
                 key={q}
                 onClick={() => sendMessage(q)}
@@ -79,6 +95,8 @@ export default function ChatWidget() {
               </button>
             ))}
           </div>
+
+          {/* Chat Messages */}
           <div className="flex-1 p-3 overflow-y-auto space-y-2">
             {messages.map((m, i) => (
               <div key={i} className={`flex ${m.fromUser ? 'justify-end' : 'justify-start'}`}>
@@ -94,14 +112,16 @@ export default function ChatWidget() {
               </div>
             ))}
           </div>
+
+          {/* Input Field */}
           <div className="p-2 border-t border-gray-200 dark:border-gray-700 flex">
             <input
               type="text"
               className="flex-1 p-2 border rounded-l bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100"
               placeholder="Type a message..."
               value={input}
-              onChange={e => setInput(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && input.trim() && sendMessage(input.trim())}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && input.trim() && sendMessage(input.trim())}
             />
             <button
               onClick={() => input.trim() && sendMessage(input.trim())}
