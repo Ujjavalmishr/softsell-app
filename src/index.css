@@ -2,9 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom font and layout enhancements */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+/* Custom font and layout enhancements */
 :root {
   --primary-color: #2563eb; 
   --secondary-color: #1e40af; 
